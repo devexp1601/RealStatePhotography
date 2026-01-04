@@ -1,0 +1,1628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real Estate Photo Pro | AI Enhancement Pipeline</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-light: #818cf8;
+            --primary-dark: #4f46e5;
+            --accent: #06b6d4;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --interior: #f97316;
+            --exterior: #0ea5e9;
+            --bg-dark: #030712;
+            --bg-card: rgba(15, 23, 42, 0.8);
+            --bg-elevated: rgba(30, 41, 59, 0.9);
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --border: rgba(51, 65, 85, 0.5);
+            --glow-primary: rgba(99, 102, 241, 0.3);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        .bg-gradient {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: 
+                radial-gradient(ellipse at 20% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(6, 182, 212, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .app-container {
+            position: relative;
+            z-index: 1;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header { text-align: center; margin-bottom: 2rem; }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #fff 0%, var(--primary-light) 50%, var(--accent) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .tagline { color: var(--text-secondary); font-size: 1.1rem; margin-top: 0.5rem; }
+
+        .stats-bar {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 100px;
+            font-size: 0.85rem;
+        }
+
+        .stat-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .stat-dot.online { background: var(--success); }
+        .stat-dot.warning { background: var(--warning); }
+        .stat-dot.off { background: var(--text-muted); }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            justify-content: center;
+        }
+
+        .tab {
+            padding: 0.75rem 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .tab:hover { border-color: var(--primary); color: var(--text-primary); }
+        .tab.active { background: rgba(99, 102, 241, 0.2); border-color: var(--primary); color: var(--primary-light); }
+
+        /* Main Content */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 2rem;
+        }
+
+        @media (max-width: 1024px) { .main-grid { grid-template-columns: 1fr; } }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 1.5rem;
+            backdrop-filter: blur(20px);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .card-title {
+            font-size: 1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Dropzone */
+        .dropzone {
+            border: 2px dashed var(--border);
+            border-radius: 16px;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .dropzone:hover, .dropzone.dragover {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        .dropzone.compact { padding: 1.5rem; }
+
+        .dropzone-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+        .dropzone-text { font-size: 1rem; font-weight: 500; margin-bottom: 0.25rem; }
+        .dropzone-hint { font-size: 0.8rem; color: var(--text-muted); }
+
+        #fileInput, #batchFileInput, #hdrFileInput, #pipelineFileInput { display: none; }
+
+        /* Pipeline Stages */
+        .pipeline-stage {
+            padding: 0.4rem 0.75rem;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            background: rgba(100, 116, 139, 0.3);
+            color: var(--text-secondary);
+            transition: all 0.3s ease;
+        }
+        .pipeline-stage.active {
+            background: rgba(99, 102, 241, 0.4);
+            color: var(--primary-light);
+            animation: stagePulse 1s infinite;
+        }
+        .pipeline-stage.complete {
+            background: rgba(16, 185, 129, 0.3);
+            color: var(--success);
+        }
+        @keyframes stagePulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        /* Image Grid */
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .image-tile {
+            position: relative;
+            aspect-ratio: 1;
+            border-radius: 12px;
+            overflow: hidden;
+            background: var(--bg-elevated);
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .image-tile:hover {
+            transform: scale(1.03);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+        }
+
+        .image-tile img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .image-tile .tile-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 50%);
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .image-tile:hover .tile-overlay { opacity: 1; }
+
+        .image-tile .tile-name {
+            position: absolute;
+            bottom: 0.5rem;
+            left: 0.5rem;
+            right: 0.5rem;
+            font-size: 0.7rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .image-tile:hover .tile-name { opacity: 1; }
+
+        .image-tile .tile-badge {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .tile-badge.pending { background: rgba(100, 116, 139, 0.9); }
+        .tile-badge.interior { background: rgba(249, 115, 22, 0.9); }
+        .tile-badge.exterior { background: rgba(14, 165, 233, 0.9); }
+        .tile-badge.error { background: rgba(239, 68, 68, 0.9); }
+
+        .image-tile .remove-btn {
+            position: absolute;
+            top: 0.5rem;
+            left: 0.5rem;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: rgba(239, 68, 68, 0.9);
+            color: white;
+            border: none;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+        }
+
+        .image-tile:hover .remove-btn { opacity: 1; }
+
+        /* Pagination */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .page-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--bg-elevated);
+            color: var(--text-primary);
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+
+        .page-btn:hover:not(:disabled) {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.2);
+        }
+
+        .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .page-btn.active { background: var(--primary); border-color: var(--primary); }
+
+        .page-info {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin: 0 0.5rem;
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.875rem 1.5rem;
+            font-size: 0.95rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            box-shadow: 0 4px 20px var(--glow-primary);
+        }
+
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 30px var(--glow-primary); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        .btn-secondary {
+            background: var(--bg-elevated);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover { border-color: var(--primary); }
+
+        .btn-full { width: 100%; margin-top: 1rem; }
+
+        .btn-group { display: flex; gap: 0.75rem; margin-top: 1rem; }
+        .btn-group .btn { flex: 1; }
+
+        /* Progress Bar */
+        .progress-container { margin-top: 1rem; display: none; }
+        .progress-container.active { display: block; }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            transition: width 0.3s ease;
+        }
+
+        /* Results Summary */
+        .results-summary {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .summary-item {
+            text-align: center;
+            padding: 1rem;
+            background: var(--bg-elevated);
+            border-radius: 12px;
+        }
+
+        .summary-value { font-size: 1.75rem; font-weight: 700; }
+        .summary-value.interior { color: var(--interior); }
+        .summary-value.exterior { color: var(--exterior); }
+        .summary-value.total { color: var(--accent); }
+
+        .summary-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-top: 0.25rem;
+        }
+
+        /* Folder Watcher Section */
+        .folder-watcher {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: var(--bg-elevated);
+            border-radius: 12px;
+        }
+
+        .folder-path {
+            font-family: monospace;
+            font-size: 0.8rem;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.5rem;
+            border-radius: 6px;
+            margin-top: 0.5rem;
+            word-break: break-all;
+        }
+
+        /* Info Card */
+        .info-card { background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(6, 182, 212, 0.1)); }
+
+        .info-list { list-style: none; }
+
+        .info-list li {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .info-list li:last-child { border-bottom: none; }
+        .info-list .check { color: var(--success); }
+
+        /* Loading */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(3, 7, 18, 0.9);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .loading-overlay.active { display: flex; }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .loading-text { margin-top: 1rem; font-size: 1.1rem; }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            font-weight: 500;
+            z-index: 200;
+            display: none;
+        }
+
+        .toast.active { display: block; animation: slideUp 0.3s ease; }
+        .toast.success { background: var(--success); color: white; }
+        .toast.error { background: var(--danger); color: white; }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+
+        /* Tab Content */
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        footer {
+            text-align: center;
+            padding: 2rem 0;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        /* View toggle */
+        .view-toggle {
+            display: flex;
+            gap: 0.25rem;
+            background: var(--bg-elevated);
+            border-radius: 8px;
+            padding: 0.25rem;
+        }
+
+        .view-toggle button {
+            padding: 0.4rem 0.75rem;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+
+        .view-toggle button.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .view-toggle button:hover:not(.active) {
+            color: var(--text-primary);
+        }
+
+        /* List view */
+        .file-list { margin-top: 1rem; }
+        .file-list.hidden { display: none; }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: var(--bg-elevated);
+            border-radius: 10px;
+            margin-bottom: 0.5rem;
+        }
+
+        .file-thumb {
+            width: 48px;
+            height: 48px;
+            border-radius: 8px;
+            object-fit: cover;
+        }
+
+        .file-info { flex: 1; min-width: 0; }
+
+        .file-name {
+            font-size: 0.85rem;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .file-size { font-size: 0.75rem; color: var(--text-muted); }
+
+        .file-status {
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .file-status.pending { background: rgba(148, 163, 184, 0.2); color: var(--text-secondary); }
+        .file-status.interior { background: rgba(249, 115, 22, 0.2); color: var(--interior); }
+        .file-status.exterior { background: rgba(14, 165, 233, 0.2); color: var(--exterior); }
+        .file-status.error { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+    </style>
+</head>
+<body>
+    <div class="bg-gradient"></div>
+
+    <div class="app-container">
+        <header>
+            <h1>🏠 Real Estate Photo Pro</h1>
+            <p class="tagline">AI-Powered Photo Enhancement Pipeline</p>
+            
+            <div class="stats-bar">
+                <div class="stat-item">
+                    <span class="stat-dot online"></span>
+                    <span>System Online</span>
+                </div>
+                <div class="stat-item" id="gpuStatus">
+                    <span class="stat-dot warning"></span>
+                    <span>Checking...</span>
+                </div>
+                <div class="stat-item" id="watcherStatus">
+                    <span class="stat-dot off"></span>
+                    <span>Folder Watcher: Off</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <div class="tab" data-tab="pipeline">🚀 Full Pipeline</div>
+            <div class="tab active" data-tab="single">📷 Single Image</div>
+            <div class="tab" data-tab="batch">📁 Batch Upload</div>
+            <div class="tab" data-tab="hdr">🌅 HDR Merge</div>
+            <div class="tab" data-tab="folder">👁️ Folder Watch</div>
+        </div>
+
+        <div class="main-grid">
+            <!-- Left Panel -->
+            <div>
+                <!-- Single Image Tab -->
+                <div class="tab-content active" id="tab-single">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">📷 Upload Single Image</h2>
+                        </div>
+                        <div class="dropzone" id="dropzone">
+                            <div class="dropzone-icon">🏡</div>
+                            <p class="dropzone-text">Drop your real estate photo here</p>
+                            <p class="dropzone-hint">JPG, PNG, WEBP, TIFF • Max 50MB</p>
+                        </div>
+                        <input type="file" id="fileInput" accept="image/*">
+                        
+                        <div class="preview-container" id="previewContainer" style="display: none; margin-top: 1rem;">
+                            <img id="previewImage" style="width: 100%; border-radius: 12px; max-height: 350px; object-fit: contain;">
+                            <button class="btn btn-primary btn-full" id="classifyBtn">🔍 Classify Image</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Batch Upload Tab -->
+                <div class="tab-content" id="tab-batch">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">📁 Batch Upload</h2>
+                            <div style="display: flex; align-items: center; gap: 1rem;">
+                                <span style="font-size: 0.8rem; color: var(--text-muted);" id="fileCount">0 files</span>
+                                <div class="view-toggle">
+                                    <button class="active" id="gridViewBtn" title="Grid View">▦</button>
+                                    <button id="listViewBtn" title="List View">≡</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="dropzone compact" id="batchDropzone">
+                            <div class="dropzone-icon">📂</div>
+                            <p class="dropzone-text">Drop multiple images here</p>
+                            <p class="dropzone-hint">Select hundreds of images at once</p>
+                        </div>
+                        <input type="file" id="batchFileInput" accept="image/*" multiple>
+
+                        <!-- Grid View -->
+                        <div class="image-grid" id="imageGrid"></div>
+                        
+                        <!-- List View -->
+                        <div class="file-list hidden" id="fileList"></div>
+
+                        <!-- Pagination -->
+                        <div class="pagination" id="pagination" style="display: none;">
+                            <button class="page-btn" id="prevPage" disabled>←</button>
+                            <span class="page-info" id="pageInfo">Page 1 of 1</span>
+                            <button class="page-btn" id="nextPage" disabled>→</button>
+                        </div>
+
+                        <div class="progress-container" id="progressContainer">
+                            <div class="progress-header">
+                                <span id="progressText">Processing...</span>
+                                <span id="progressPercent">0%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <div class="results-summary" id="resultsSummary" style="display: none;">
+                            <div class="summary-item">
+                                <div class="summary-value total" id="totalCount">0</div>
+                                <div class="summary-label">Total</div>
+                            </div>
+                            <div class="summary-item">
+                                <div class="summary-value interior" id="interiorCount">0</div>
+                                <div class="summary-label">Interior</div>
+                            </div>
+                            <div class="summary-item">
+                                <div class="summary-value exterior" id="exteriorCount">0</div>
+                                <div class="summary-label">Exterior</div>
+                            </div>
+                        </div>
+
+                        <div class="btn-group">
+                            <button class="btn btn-secondary" id="clearBatchBtn" style="display: none;">🗑️ Clear All</button>
+                            <button class="btn btn-primary" id="processBatchBtn" disabled>🚀 Process All</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Folder Watch Tab -->
+                <div class="tab-content" id="tab-folder">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">👁️ Folder Watcher</h2>
+                        </div>
+                        <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                            Automatically process images dropped into the watch folder.
+                        </p>
+                        
+                        <div class="folder-watcher">
+                            <strong>Watch Folder:</strong>
+                            <div class="folder-path" id="watchFolderPath">Loading...</div>
+                        </div>
+                        
+                        <div class="folder-watcher" style="margin-top: 0.75rem;">
+                            <strong>Output Folder:</strong>
+                            <div class="folder-path" id="outputFolderPath">Loading...</div>
+                        </div>
+
+                        <div class="btn-group">
+                            <button class="btn btn-primary" id="startWatcherBtn">▶️ Start Watcher</button>
+                            <button class="btn btn-secondary" id="stopWatcherBtn" disabled>⏹️ Stop</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- HDR Merge Tab -->
+                <div class="tab-content" id="tab-hdr">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">🌅 HDR Bracket Merge</h2>
+                            <span style="font-size: 0.8rem; color: var(--text-muted);" id="hdrCount">0 brackets</span>
+                        </div>
+                        <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.85rem;">
+                            Upload 3, 5, or 7 exposure brackets of the same scene. The algorithm merges them into a single well-exposed image.
+                        </p>
+                        
+                        <div class="dropzone compact" id="hdrDropzone">
+                            <div class="dropzone-icon">🌄</div>
+                            <p class="dropzone-text">Drop 3, 5, or 7 exposure brackets</p>
+                            <p class="dropzone-hint">Or upload a ZIP file containing brackets</p>
+                        </div>
+                        <input type="file" id="hdrFileInput" accept="image/*,.zip" multiple>
+
+                        <!-- HDR Bracket Preview -->
+                        <div class="image-grid" id="hdrPreviewGrid" style="grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));"></div>
+
+                        <!-- HDR Result -->
+                        <div id="hdrResultContainer" style="display: none; margin-top: 1rem;">
+                            <div style="background: var(--bg-elevated); border-radius: 12px; padding: 1rem;">
+                                <h4 style="margin-bottom: 0.75rem; font-size: 0.9rem; color: var(--text-secondary);">✅ Merged Result</h4>
+                                <img id="hdrResultImage" style="width: 100%; border-radius: 8px; max-height: 400px; object-fit: contain;">
+                                <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem;">
+                                    <span id="hdrResultInfo" style="flex: 1; font-size: 0.8rem; color: var(--text-muted);"></span>
+                                    <a id="hdrDownloadBtn" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem;" download>💾 Download</a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="btn-group">
+                            <button class="btn btn-secondary" id="clearHdrBtn" style="display: none;">🗑️ Clear</button>
+                            <button class="btn btn-primary" id="mergeHdrBtn" disabled>🔀 Merge Brackets</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pipeline Tab -->
+                <div class="tab-content" id="tab-pipeline">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">🚀 Full Processing Pipeline</h2>
+                            <span style="font-size: 0.8rem; color: var(--text-muted);" id="pipelineCount">0 images</span>
+                        </div>
+                        <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.85rem;">
+                            Upload 1 image (single) or 3/5/7 brackets. The pipeline will automatically:
+                            HDR merge → Normalize → Classify as Interior/Exterior
+                        </p>
+                        
+                        <div class="dropzone compact" id="pipelineDropzone">
+                            <div class="dropzone-icon">✨</div>
+                            <p class="dropzone-text">Drop images here for full processing</p>
+                            <p class="dropzone-hint">1 image or 3/5/7 HDR brackets</p>
+                        </div>
+                        <input type="file" id="pipelineFileInput" accept="image/*" multiple>
+
+                        <!-- Pipeline Preview Grid -->
+                        <div class="image-grid" id="pipelinePreviewGrid" style="grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));"></div>
+
+                        <!-- Pipeline Progress -->
+                        <div id="pipelineProgress" style="display: none; margin-top: 1rem;">
+                            <div style="background: var(--bg-elevated); border-radius: 12px; padding: 1rem;">
+                                <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                                    <span class="pipeline-stage" id="stage-hdr">1️⃣ HDR</span>
+                                    <span style="color: var(--text-muted);">→</span>
+                                    <span class="pipeline-stage" id="stage-normalize">2️⃣ Normalize</span>
+                                    <span style="color: var(--text-muted);">→</span>
+                                    <span class="pipeline-stage" id="stage-classify">3️⃣ Classify</span>
+                                    <span style="color: var(--text-muted);">→</span>
+                                    <span class="pipeline-stage" id="stage-enhance">4️⃣ Enhance</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pipeline Result -->
+                        <div id="pipelineResultContainer" style="display: none; margin-top: 1rem;">
+                            <div style="background: var(--bg-elevated); border-radius: 12px; padding: 1rem;">
+                                <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                                    <div id="pipelineResultIcon" style="width: 64px; height: 64px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 2rem;"></div>
+                                    <div>
+                                        <div id="pipelineResultType" style="font-size: 1.5rem; font-weight: 700; text-transform: capitalize;"></div>
+                                        <div id="pipelineResultConf" style="color: var(--text-secondary);"></div>
+                                    </div>
+                                </div>
+                                <img id="pipelineResultImage" style="width: 100%; border-radius: 8px; max-height: 350px; object-fit: contain;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.75rem;">
+                                    <span id="pipelineResultInfo" style="font-size: 0.8rem; color: var(--text-muted);"></span>
+                                    <a id="pipelineDownloadBtn" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem;" download>💾 Download</a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="btn-group">
+                            <button class="btn btn-secondary" id="clearPipelineBtn" style="display: none;">🗑️ Clear</button>
+                            <button class="btn btn-primary" id="processPipelineBtn" disabled>🚀 Process Pipeline</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel -->
+            <div>
+                <!-- Single Result Card -->
+                <div class="card" id="singleResultCard" style="display: none; margin-bottom: 1rem;">
+                    <div class="card-header">
+                        <h2 class="card-title">📊 Result</h2>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background: var(--bg-elevated); border-radius: 12px;">
+                        <div id="resultIcon" style="width: 56px; height: 56px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; background: linear-gradient(135deg, var(--interior), #ea580c);">🛋️</div>
+                        <div style="flex: 1;">
+                            <div id="resultType" style="font-size: 1.25rem; font-weight: 700; text-transform: capitalize;">Interior</div>
+                            <div id="resultConfidence" style="color: var(--text-secondary);">Confidence: 95%</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Info Card -->
+                <div class="card info-card">
+                    <h3 class="card-title">⚡ Pipeline Features</h3>
+                    <ul class="info-list" style="margin-top: 1rem;">
+                        <li><span class="check">✓</span> CLIP scene classification</li>
+                        <li><span class="check">✓</span> Batch processing</li>
+                        <li><span class="check">✓</span> Folder watching</li>
+                        <li><span class="check">✓</span> Multi-threaded jobs</li>
+                        <li><span class="check">✓</span> HDR bracket merging</li>
+                        <li><span>○</span> SDXL enhancement (soon)</li>
+                        <li><span>○</span> Sky replacement (soon)</li>
+                        <li><span>○</span> Window pull (soon)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <footer>Built for high-volume real estate photo processing</footer>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div style="text-align: center;">
+            <div class="loading-spinner"></div>
+            <p class="loading-text" id="loadingText">Processing...</p>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // Constants
+        const ITEMS_PER_PAGE = 24;
+        let currentPage = 1;
+        let currentView = 'grid'; // 'grid' or 'list'
+        let batchFiles = [];
+        let imageDataUrls = {}; // Cache for image previews
+
+        // Tab switching
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+            });
+        });
+
+        // Single image handling
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('fileInput');
+        const previewContainer = document.getElementById('previewContainer');
+        const previewImage = document.getElementById('previewImage');
+        const classifyBtn = document.getElementById('classifyBtn');
+        let selectedFile = null;
+
+        dropzone.addEventListener('click', () => fileInput.click());
+        dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dragover'); });
+        dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+        dropzone.addEventListener('drop', e => {
+            e.preventDefault();
+            dropzone.classList.remove('dragover');
+            if (e.dataTransfer.files.length) handleSingleFile(e.dataTransfer.files[0]);
+        });
+        fileInput.addEventListener('change', e => { if (e.target.files.length) handleSingleFile(e.target.files[0]); });
+
+        function handleSingleFile(file) {
+            selectedFile = file;
+            const reader = new FileReader();
+            reader.onload = e => {
+                previewImage.src = e.target.result;
+                previewContainer.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        classifyBtn.addEventListener('click', async () => {
+            if (!selectedFile) return;
+            showLoading('Classifying image...');
+            
+            const formData = new FormData();
+            formData.append('image', selectedFile);
+
+            try {
+                const res = await fetch('/classify', { method: 'POST', body: formData });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error);
+                showSingleResult(data);
+            } catch (err) {
+                showToast(err.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        });
+
+        function showSingleResult(data) {
+            const card = document.getElementById('singleResultCard');
+            const icon = document.getElementById('resultIcon');
+            const type = document.getElementById('resultType');
+            const conf = document.getElementById('resultConfidence');
+
+            icon.textContent = data.classification === 'interior' ? '🛋️' : '🏡';
+            icon.style.background = data.classification === 'interior' 
+                ? 'linear-gradient(135deg, var(--interior), #ea580c)'
+                : 'linear-gradient(135deg, var(--exterior), #0284c7)';
+            type.textContent = data.classification;
+            conf.textContent = `Confidence: ${data.confidence}%`;
+            card.style.display = 'block';
+        }
+
+        // Batch handling
+        const batchDropzone = document.getElementById('batchDropzone');
+        const batchFileInput = document.getElementById('batchFileInput');
+        const imageGrid = document.getElementById('imageGrid');
+        const fileList = document.getElementById('fileList');
+        const processBatchBtn = document.getElementById('processBatchBtn');
+        const clearBatchBtn = document.getElementById('clearBatchBtn');
+        const progressContainer = document.getElementById('progressContainer');
+        const resultsSummary = document.getElementById('resultsSummary');
+        const pagination = document.getElementById('pagination');
+        const prevPageBtn = document.getElementById('prevPage');
+        const nextPageBtn = document.getElementById('nextPage');
+        const pageInfo = document.getElementById('pageInfo');
+
+        // View toggle
+        const gridViewBtn = document.getElementById('gridViewBtn');
+        const listViewBtn = document.getElementById('listViewBtn');
+
+        gridViewBtn.addEventListener('click', () => {
+            currentView = 'grid';
+            gridViewBtn.classList.add('active');
+            listViewBtn.classList.remove('active');
+            imageGrid.classList.remove('hidden');
+            fileList.classList.add('hidden');
+            renderCurrentPage();
+        });
+
+        listViewBtn.addEventListener('click', () => {
+            currentView = 'list';
+            listViewBtn.classList.add('active');
+            gridViewBtn.classList.remove('active');
+            fileList.classList.remove('hidden');
+            imageGrid.classList.add('hidden');
+            renderCurrentPage();
+        });
+
+        batchDropzone.addEventListener('click', () => batchFileInput.click());
+        batchDropzone.addEventListener('dragover', e => { e.preventDefault(); batchDropzone.classList.add('dragover'); });
+        batchDropzone.addEventListener('dragleave', () => batchDropzone.classList.remove('dragover'));
+        batchDropzone.addEventListener('drop', e => {
+            e.preventDefault();
+            batchDropzone.classList.remove('dragover');
+            handleBatchFiles(e.dataTransfer.files);
+        });
+        batchFileInput.addEventListener('change', e => handleBatchFiles(e.target.files));
+
+        function handleBatchFiles(files) {
+            const startIdx = batchFiles.length;
+            for (const file of files) {
+                if (file.type.startsWith('image/')) {
+                    const id = `file_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                    batchFiles.push({ id, file, status: 'pending' });
+                    
+                    // Create thumbnail
+                    const reader = new FileReader();
+                    reader.onload = e => {
+                        imageDataUrls[id] = e.target.result;
+                        // Re-render if this is on current page
+                        const pageStart = (currentPage - 1) * ITEMS_PER_PAGE;
+                        const pageEnd = pageStart + ITEMS_PER_PAGE;
+                        const itemIdx = batchFiles.findIndex(f => f.id === id);
+                        if (itemIdx >= pageStart && itemIdx < pageEnd) {
+                            renderCurrentPage();
+                        }
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+            
+            updateUI();
+        }
+
+        function updateUI() {
+            document.getElementById('fileCount').textContent = `${batchFiles.length} files`;
+            processBatchBtn.disabled = batchFiles.length === 0;
+            clearBatchBtn.style.display = batchFiles.length > 0 ? 'block' : 'none';
+            
+            const totalPages = Math.ceil(batchFiles.length / ITEMS_PER_PAGE);
+            if (currentPage > totalPages && totalPages > 0) currentPage = totalPages;
+            if (currentPage < 1) currentPage = 1;
+            
+            pagination.style.display = totalPages > 1 ? 'flex' : 'none';
+            pageInfo.textContent = `Page ${currentPage} of ${totalPages || 1}`;
+            prevPageBtn.disabled = currentPage <= 1;
+            nextPageBtn.disabled = currentPage >= totalPages;
+            
+            renderCurrentPage();
+        }
+
+        function renderCurrentPage() {
+            const start = (currentPage - 1) * ITEMS_PER_PAGE;
+            const end = start + ITEMS_PER_PAGE;
+            const pageItems = batchFiles.slice(start, end);
+
+            if (currentView === 'grid') {
+                imageGrid.innerHTML = pageItems.map(item => {
+                    const imgSrc = imageDataUrls[item.id] || '';
+                    const status = item.result?.classification || item.status;
+                    return `
+                        <div class="image-tile" data-id="${item.id}">
+                            ${imgSrc ? `<img src="${imgSrc}" alt="${item.file.name}">` : '<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:2rem;">📷</div>'}
+                            <div class="tile-overlay"></div>
+                            <span class="tile-badge ${status}">${status}</span>
+                            <button class="remove-btn" onclick="removeFile('${item.id}', event)">✕</button>
+                            <span class="tile-name">${item.file.name}</span>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                fileList.innerHTML = pageItems.map(item => {
+                    const size = (item.file.size / 1024).toFixed(1) + ' KB';
+                    const status = item.result?.classification || item.status;
+                    const imgSrc = imageDataUrls[item.id] || '';
+                    return `
+                        <div class="file-item">
+                            ${imgSrc ? `<img src="${imgSrc}" class="file-thumb" alt="">` : '<div style="width:48px;height:48px;background:var(--bg-card);border-radius:8px;display:flex;align-items:center;justify-content:center;">📷</div>'}
+                            <div class="file-info">
+                                <div class="file-name">${item.file.name}</div>
+                                <div class="file-size">${size}</div>
+                            </div>
+                            <span class="file-status ${status}">${status}</span>
+                            <button class="remove-btn" style="position:static;opacity:1;width:28px;height:28px;" onclick="removeFile('${item.id}', event)">✕</button>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        function removeFile(id, event) {
+            event.stopPropagation();
+            batchFiles = batchFiles.filter(f => f.id !== id);
+            delete imageDataUrls[id];
+            updateUI();
+        }
+
+        // Pagination
+        prevPageBtn.addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage--;
+                updateUI();
+            }
+        });
+
+        nextPageBtn.addEventListener('click', () => {
+            const totalPages = Math.ceil(batchFiles.length / ITEMS_PER_PAGE);
+            if (currentPage < totalPages) {
+                currentPage++;
+                updateUI();
+            }
+        });
+
+        clearBatchBtn.addEventListener('click', () => {
+            batchFiles = [];
+            imageDataUrls = {};
+            currentPage = 1;
+            updateUI();
+            progressContainer.classList.remove('active');
+            resultsSummary.style.display = 'none';
+        });
+
+        processBatchBtn.addEventListener('click', async () => {
+            if (batchFiles.length === 0) return;
+
+            processBatchBtn.disabled = true;
+            progressContainer.classList.add('active');
+
+            const formData = new FormData();
+            batchFiles.forEach(item => formData.append('images', item.file));
+
+            try {
+                const res = await fetch('/classify-batch', { method: 'POST', body: formData });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error);
+                pollJobStatus(data.job_id);
+            } catch (err) {
+                showToast(err.message, 'error');
+                processBatchBtn.disabled = false;
+            }
+        });
+
+        async function pollJobStatus(jobId) {
+            while (true) {
+                try {
+                    const res = await fetch(`/job/${jobId}`);
+                    const data = await res.json();
+
+                    document.getElementById('progressText').textContent = `Processing ${data.progress.completed}/${data.progress.total}`;
+                    document.getElementById('progressPercent').textContent = `${data.progress.percentage}%`;
+                    document.getElementById('progressFill').style.width = `${data.progress.percentage}%`;
+
+                    if (data.status === 'completed') {
+                        if (data.results) {
+                            batchFiles.forEach((item, i) => {
+                                if (data.results[i]) {
+                                    item.status = data.results[i].classification || 'error';
+                                    item.result = data.results[i];
+                                }
+                            });
+                            renderCurrentPage();
+                        }
+
+                        document.getElementById('totalCount').textContent = data.summary.total;
+                        document.getElementById('interiorCount').textContent = data.summary.interior;
+                        document.getElementById('exteriorCount').textContent = data.summary.exterior;
+                        resultsSummary.style.display = 'grid';
+
+                        showToast(`Processed ${data.summary.success} images!`, 'success');
+                        processBatchBtn.disabled = false;
+                        break;
+                    }
+
+                    await new Promise(r => setTimeout(r, 500));
+                } catch (err) {
+                    showToast('Error checking job status', 'error');
+                    break;
+                }
+            }
+        }
+
+        // Folder Watcher
+        const startWatcherBtn = document.getElementById('startWatcherBtn');
+        const stopWatcherBtn = document.getElementById('stopWatcherBtn');
+        const watcherStatus = document.getElementById('watcherStatus');
+
+        async function updateWatcherStatus() {
+            try {
+                const res = await fetch('/folder-watcher/status');
+                const data = await res.json();
+                document.getElementById('watchFolderPath').textContent = data.watch_folder;
+                document.getElementById('outputFolderPath').textContent = data.output_folder;
+                
+                if (data.running) {
+                    watcherStatus.innerHTML = '<span class="stat-dot online"></span><span>Watcher: Active</span>';
+                    startWatcherBtn.disabled = true;
+                    stopWatcherBtn.disabled = false;
+                } else {
+                    watcherStatus.innerHTML = '<span class="stat-dot off"></span><span>Watcher: Off</span>';
+                    startWatcherBtn.disabled = false;
+                    stopWatcherBtn.disabled = true;
+                }
+            } catch (err) {}
+        }
+
+        startWatcherBtn.addEventListener('click', async () => {
+            try {
+                await fetch('/folder-watcher/start', { method: 'POST' });
+                showToast('Folder watcher started!', 'success');
+                updateWatcherStatus();
+            } catch (err) {
+                showToast('Failed to start watcher', 'error');
+            }
+        });
+
+        stopWatcherBtn.addEventListener('click', async () => {
+            try {
+                await fetch('/folder-watcher/stop', { method: 'POST' });
+                showToast('Folder watcher stopped', 'success');
+                updateWatcherStatus();
+            } catch (err) {
+                showToast('Failed to stop watcher', 'error');
+            }
+        });
+
+        // Health check
+        fetch('/health').then(r => r.json()).then(data => {
+            const gpuStatus = document.getElementById('gpuStatus');
+            gpuStatus.innerHTML = data.gpu_available 
+                ? '<span class="stat-dot online"></span><span>GPU Active</span>'
+                : '<span class="stat-dot warning"></span><span>CPU Mode</span>';
+        });
+
+        updateWatcherStatus();
+
+        // ========== HDR Merge Handling ==========
+        const hdrDropzone = document.getElementById('hdrDropzone');
+        const hdrFileInput = document.getElementById('hdrFileInput');
+        const hdrPreviewGrid = document.getElementById('hdrPreviewGrid');
+        const hdrCount = document.getElementById('hdrCount');
+        const mergeHdrBtn = document.getElementById('mergeHdrBtn');
+        const clearHdrBtn = document.getElementById('clearHdrBtn');
+        const hdrResultContainer = document.getElementById('hdrResultContainer');
+
+        let hdrFiles = [];
+        let hdrDataUrls = {};
+
+        hdrDropzone.addEventListener('click', () => hdrFileInput.click());
+        hdrDropzone.addEventListener('dragover', e => { e.preventDefault(); hdrDropzone.classList.add('dragover'); });
+        hdrDropzone.addEventListener('dragleave', () => hdrDropzone.classList.remove('dragover'));
+        hdrDropzone.addEventListener('drop', e => {
+            e.preventDefault();
+            hdrDropzone.classList.remove('dragover');
+            handleHdrFiles(e.dataTransfer.files);
+        });
+        hdrFileInput.addEventListener('change', e => handleHdrFiles(e.target.files));
+
+        function handleHdrFiles(files) {
+            // Check if ZIP file
+            if (files.length === 1 && files[0].name.toLowerCase().endsWith('.zip')) {
+                processHdrZip(files[0]);
+                return;
+            }
+
+            // Regular images
+            for (const file of files) {
+                if (file.type.startsWith('image/')) {
+                    const id = `hdr_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                    hdrFiles.push({ id, file });
+                    
+                    const reader = new FileReader();
+                    reader.onload = e => {
+                        hdrDataUrls[id] = e.target.result;
+                        renderHdrPreviews();
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+            updateHdrUI();
+        }
+
+        function updateHdrUI() {
+            const count = hdrFiles.length;
+            hdrCount.textContent = `${count} brackets`;
+            
+            const valid = [1, 3, 5, 7].includes(count);
+            mergeHdrBtn.disabled = !valid;
+            clearHdrBtn.style.display = count > 0 ? 'block' : 'none';
+            
+            if (count > 0 && !valid) {
+                mergeHdrBtn.textContent = `Need 3, 5, or 7 (have ${count})`;
+            } else {
+                mergeHdrBtn.textContent = '🔀 Merge Brackets';
+            }
+        }
+
+        function renderHdrPreviews() {
+            hdrPreviewGrid.innerHTML = hdrFiles.map((item, i) => {
+                const imgSrc = hdrDataUrls[item.id] || '';
+                const labels = getExposureLabel(i, hdrFiles.length);
+                return `
+                    <div class="image-tile" style="aspect-ratio: 4/3;">
+                        ${imgSrc ? `<img src="${imgSrc}" alt="${item.file.name}">` : '<div style="display:flex;align-items:center;justify-content:center;height:100%;">📷</div>'}
+                        <div class="tile-overlay"></div>
+                        <span class="tile-badge pending">${labels}</span>
+                        <button class="remove-btn" onclick="removeHdrFile('${item.id}', event)">✕</button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function getExposureLabel(index, total) {
+            if (total === 1) return 'Single';
+            const mid = Math.floor(total / 2);
+            if (index < mid) return `-${mid - index}EV`;
+            if (index === mid) return '0EV';
+            return `+${index - mid}EV`;
+        }
+
+        window.removeHdrFile = function(id, event) {
+            event.stopPropagation();
+            hdrFiles = hdrFiles.filter(f => f.id !== id);
+            delete hdrDataUrls[id];
+            renderHdrPreviews();
+            updateHdrUI();
+        };
+
+        clearHdrBtn.addEventListener('click', () => {
+            hdrFiles = [];
+            hdrDataUrls = {};
+            hdrPreviewGrid.innerHTML = '';
+            hdrResultContainer.style.display = 'none';
+            updateHdrUI();
+        });
+
+        mergeHdrBtn.addEventListener('click', async () => {
+            if (hdrFiles.length === 0) return;
+            
+            showLoading('Merging HDR brackets...');
+            mergeHdrBtn.disabled = true;
+
+            const formData = new FormData();
+            hdrFiles.forEach(item => formData.append('images', item.file));
+
+            try {
+                const res = await fetch('/hdr/merge', { method: 'POST', body: formData });
+                const data = await res.json();
+                
+                if (!res.ok) throw new Error(data.error);
+                
+                // Show result
+                showHdrResult(data);
+                showToast('HDR merge complete!', 'success');
+            } catch (err) {
+                showToast(err.message, 'error');
+            } finally {
+                hideLoading();
+                mergeHdrBtn.disabled = false;
+            }
+        });
+
+        function showHdrResult(data) {
+            const resultImg = document.getElementById('hdrResultImage');
+            const resultInfo = document.getElementById('hdrResultInfo');
+            const downloadBtn = document.getElementById('hdrDownloadBtn');
+
+            // Load image from download URL
+            resultImg.src = data.download_url;
+            resultInfo.textContent = `${data.dimensions.width}×${data.dimensions.height} • ${data.method} • ${data.input_count} brackets`;
+            downloadBtn.href = data.download_url;
+            
+            hdrResultContainer.style.display = 'block';
+        }
+
+        async function processHdrZip(zipFile) {
+            showLoading('Processing ZIP file...');
+            
+            const formData = new FormData();
+            formData.append('zip', zipFile);
+
+            try {
+                const res = await fetch('/hdr/merge-zip', { method: 'POST', body: formData });
+                const data = await res.json();
+                
+                if (!res.ok) throw new Error(data.error);
+                
+                showHdrResult(data);
+                showToast('HDR merge complete!', 'success');
+            } catch (err) {
+                showToast(err.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // ========== Pipeline Handling ==========
+        const pipelineDropzone = document.getElementById('pipelineDropzone');
+        const pipelineFileInput = document.getElementById('pipelineFileInput');
+        const pipelinePreviewGrid = document.getElementById('pipelinePreviewGrid');
+        const pipelineCount = document.getElementById('pipelineCount');
+        const processPipelineBtn = document.getElementById('processPipelineBtn');
+        const clearPipelineBtn = document.getElementById('clearPipelineBtn');
+        const pipelineProgress = document.getElementById('pipelineProgress');
+        const pipelineResultContainer = document.getElementById('pipelineResultContainer');
+
+        let pipelineFiles = [];
+        let pipelineDataUrls = {};
+
+        pipelineDropzone.addEventListener('click', () => pipelineFileInput.click());
+        pipelineDropzone.addEventListener('dragover', e => { e.preventDefault(); pipelineDropzone.classList.add('dragover'); });
+        pipelineDropzone.addEventListener('dragleave', () => pipelineDropzone.classList.remove('dragover'));
+        pipelineDropzone.addEventListener('drop', e => {
+            e.preventDefault();
+            pipelineDropzone.classList.remove('dragover');
+            handlePipelineFiles(e.dataTransfer.files);
+        });
+        pipelineFileInput.addEventListener('change', e => handlePipelineFiles(e.target.files));
+
+        function handlePipelineFiles(files) {
+            for (const file of files) {
+                if (file.type.startsWith('image/')) {
+                    const id = `pipe_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                    pipelineFiles.push({ id, file });
+                    
+                    const reader = new FileReader();
+                    reader.onload = e => {
+                        pipelineDataUrls[id] = e.target.result;
+                        renderPipelinePreviews();
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+            updatePipelineUI();
+        }
+
+        function updatePipelineUI() {
+            const count = pipelineFiles.length;
+            pipelineCount.textContent = `${count} images`;
+            
+            const valid = [1, 3, 5, 7].includes(count);
+            processPipelineBtn.disabled = !valid;
+            clearPipelineBtn.style.display = count > 0 ? 'block' : 'none';
+            
+            if (count > 0 && !valid) {
+                processPipelineBtn.textContent = `Need 1, 3, 5, or 7 (have ${count})`;
+            } else if (count === 1) {
+                processPipelineBtn.textContent = '🚀 Process Single Image';
+            } else {
+                processPipelineBtn.textContent = `🚀 Process ${count} Brackets`;
+            }
+        }
+
+        function renderPipelinePreviews() {
+            pipelinePreviewGrid.innerHTML = pipelineFiles.map((item, i) => {
+                const imgSrc = pipelineDataUrls[item.id] || '';
+                const label = pipelineFiles.length === 1 ? 'Single' : getExposureLabel(i, pipelineFiles.length);
+                return `
+                    <div class="image-tile" style="aspect-ratio: 4/3;">
+                        ${imgSrc ? `<img src="${imgSrc}" alt="${item.file.name}">` : '<div style="display:flex;align-items:center;justify-content:center;height:100%;">📷</div>'}
+                        <div class="tile-overlay"></div>
+                        <span class="tile-badge pending">${label}</span>
+                        <button class="remove-btn" onclick="removePipelineFile('${item.id}', event)">✕</button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        window.removePipelineFile = function(id, event) {
+            event.stopPropagation();
+            pipelineFiles = pipelineFiles.filter(f => f.id !== id);
+            delete pipelineDataUrls[id];
+            renderPipelinePreviews();
+            updatePipelineUI();
+        };
+
+        clearPipelineBtn.addEventListener('click', () => {
+            pipelineFiles = [];
+            pipelineDataUrls = {};
+            pipelinePreviewGrid.innerHTML = '';
+            pipelineProgress.style.display = 'none';
+            pipelineResultContainer.style.display = 'none';
+            resetPipelineStages();
+            updatePipelineUI();
+        });
+
+        function resetPipelineStages() {
+            ['stage-hdr', 'stage-normalize', 'stage-classify', 'stage-enhance'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.classList.remove('active', 'complete');
+                }
+            });
+        }
+
+        function updatePipelineStage(stage) {
+            resetPipelineStages();
+            const stageMap = {
+                'hdr_merge': 'stage-hdr',
+                'normalize': 'stage-normalize',
+                'classify': 'stage-classify',
+                'enhance': 'stage-enhance'
+            };
+            
+            // Mark completed stages
+            const stageOrder = ['hdr_merge', 'normalize', 'classify', 'enhance'];
+            const currentIdx = stageOrder.indexOf(stage);
+            
+            for (let i = 0; i < currentIdx; i++) {
+                const el = document.getElementById(stageMap[stageOrder[i]]);
+                if (el) el.classList.add('complete');
+            }
+            
+            // Mark current as active
+            if (stageMap[stage]) {
+                const el = document.getElementById(stageMap[stage]);
+                if (el) el.classList.add('active');
+            }
+        }
+
+        processPipelineBtn.addEventListener('click', async () => {
+            if (pipelineFiles.length === 0) return;
+            
+            processPipelineBtn.disabled = true;
+            pipelineProgress.style.display = 'block';
+            pipelineResultContainer.style.display = 'none';
+            
+            // Show processing stages
+            updatePipelineStage('hdr_merge');
+
+            const formData = new FormData();
+            pipelineFiles.forEach(item => formData.append('images', item.file));
+
+            try {
+                const res = await fetch('/pipeline/process', { method: 'POST', body: formData });
+                const data = await res.json();
+                
+                if (!res.ok) throw new Error(data.error);
+                
+                // Mark all stages complete
+                ['stage-hdr', 'stage-normalize', 'stage-classify', 'stage-enhance'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.classList.remove('active');
+                        el.classList.add('complete');
+                    }
+                });
+                
+                // Show result
+                showPipelineResult(data);
+                showToast('Pipeline complete!', 'success');
+            } catch (err) {
+                showToast(err.message, 'error');
+            } finally {
+                processPipelineBtn.disabled = false;
+            }
+        });
+
+        function showPipelineResult(data) {
+            const resultIcon = document.getElementById('pipelineResultIcon');
+            const resultType = document.getElementById('pipelineResultType');
+            const resultConf = document.getElementById('pipelineResultConf');
+            const resultImg = document.getElementById('pipelineResultImage');
+            const resultInfo = document.getElementById('pipelineResultInfo');
+            const downloadBtn = document.getElementById('pipelineDownloadBtn');
+
+            // Set classification result
+            if (data.classification === 'interior') {
+                resultIcon.textContent = '🛋️';
+                resultIcon.style.background = 'linear-gradient(135deg, var(--interior), #ea580c)';
+            } else {
+                resultIcon.textContent = '🏡';
+                resultIcon.style.background = 'linear-gradient(135deg, var(--exterior), #0284c7)';
+            }
+            
+            resultType.textContent = data.classification;
+            resultConf.textContent = `Confidence: ${data.confidence}%`;
+            
+            // Set image
+            if (data.download_url) {
+                resultImg.src = data.download_url;
+                downloadBtn.href = data.download_url;
+                downloadBtn.style.display = 'block';
+            } else if (data.output_path) {
+                // Fallback for local file
+                resultImg.src = pipelineDataUrls[pipelineFiles[0]?.id] || '';
+                downloadBtn.style.display = 'none';
+            }
+            
+            // Set info
+            const stages = data.stages_completed?.join(' → ') || '';
+            const dims = data.dimensions ? `${data.dimensions.width}×${data.dimensions.height}` : '';
+            const time = data.processing_time_ms ? `${data.processing_time_ms}ms` : '';
+            resultInfo.textContent = [dims, stages, time].filter(Boolean).join(' • ');
+            
+            pipelineResultContainer.style.display = 'block';
+        }
+
+        // Helpers
+        function showLoading(text) {
+            document.getElementById('loadingText').textContent = text;
+            document.getElementById('loadingOverlay').classList.add('active');
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingOverlay').classList.remove('active');
+        }
+
+        function showToast(message, type) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast active ${type}`;
+            setTimeout(() => toast.classList.remove('active'), 3000);
+        }
+    </script>
+</body>
+</html>
