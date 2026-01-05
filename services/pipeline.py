@@ -1,7 +1,3 @@
-"""
-Pipeline Orchestrator
-Chains all processing steps: HDR → Normalize → Classify → (future: SDXL, etc.)
-"""
 
 import os
 from typing import List, Optional
@@ -12,6 +8,7 @@ from enum import Enum
 from config import HDR_OUTPUT_FOLDER, OUTPUT_FOLDER
 from services.hdr_processor import hdr_processor
 from services.enhancer import enhancer
+from services.sky_replacer import sky_replacer
 from models.clip_classifier import classifier
 from utils.logger import get_pipeline_logger
 
@@ -20,13 +17,12 @@ log = get_pipeline_logger()
 
 
 class PipelineStage(Enum):
-    """Pipeline processing stages"""
     PENDING = "pending"
     HDR_MERGE = "hdr_merge"
     NORMALIZE = "normalize"
     CLASSIFY = "classify"
-    ENHANCE = "enhance"  # Future: SDXL
-    SKY_REPLACE = "sky_replace"  # Future: Exterior
+    ENHANCE = "enhance"
+    SKY_REPLACE = "sky_replace"
     WINDOW_PULL = "window_pull"  # Future: Interior
     QC_CHECK = "qc_check"  # Future
     COMPLETE = "complete"
@@ -35,28 +31,22 @@ class PipelineStage(Enum):
 
 @dataclass
 class PipelineResult:
-    """Result of pipeline processing"""
     status: str = "pending"
     stage: str = "pending"
     
-    # Input info
     input_count: int = 0
     input_paths: List[str] = field(default_factory=list)
     
-    # HDR result
     hdr_merged: bool = False
     hdr_output_path: Optional[str] = None
     
-    # Classification result
-    classification: Optional[str] = None  # "interior" or "exterior"
+    classification: Optional[str] = None
     confidence: Optional[float] = None
     scores: dict = field(default_factory=dict)
     
-    # Final output
     output_path: Optional[str] = None
     dimensions: dict = field(default_factory=dict)
     
-    # Processing info
     processing_time_ms: int = 0
     stages_completed: List[str] = field(default_factory=list)
     error: Optional[str] = None
@@ -80,28 +70,13 @@ class PipelineResult:
 
 
 class Pipeline:
-    """
-    Main pipeline orchestrator
-    
-    Chains: Input → HDR (optional) → Normalize → Classify → (future stages)
-    """
-    
     def process(
         self, 
         image_paths: List[str],
         skip_hdr: bool = False,
-        skip_enhance: bool = False
+        skip_enhance: bool = False,
+        skip_sky: bool = False
     ) -> PipelineResult:
-        """
-        Process images through the full pipeline
-        
-        Args:
-            image_paths: List of image paths (1 for single, 3/5/7 for brackets)
-            skip_hdr: Skip HDR merging even if multiple images
-            
-        Returns:
-            PipelineResult with all processing info
-        """
         log.info("=" * 50)
         log.info(f"🚀 PIPELINE START | {len(image_paths)} image(s)")
         log.info("=" * 50)
@@ -173,22 +148,37 @@ class Pipeline:
             else:
                 log.info("🎨 STAGE 4: ENHANCE | SDXL + ControlNet processing")
                 enhance_start = datetime.now()
-                
-                # Enhance the image
                 enhance_result = enhancer.enhance_image(working_image)
                 working_image = enhance_result["output_path"]
                 result.stages_completed.append("enhance")
-                
                 enhance_time = (datetime.now() - enhance_start).total_seconds()
                 log.info(f"   ✓ Enhanced in {enhance_time:.1f}s ({enhance_result.get('tiles_processed', 0)} tiles)")
             
-            # Log classification branch (future stages)
-            if result.classification == "interior":
-                log.info("🏠 Branch: INTERIOR path (future: LoRA + Window Pull)")
-            else:
-                log.info("🌳 Branch: EXTERIOR path (future: Sky Replacement)")
+            # Stage 5: Sky replacement (exterior only)
+            if result.classification == "exterior" and not skip_sky:
+                result.stage = PipelineStage.SKY_REPLACE.value
+                log.info("☁️ STAGE 5: SKY REPLACEMENT | Exterior detected")
+                sky_start = datetime.now()
+                try:
+                    sky_result = sky_replacer.replace_sky(working_image)
+                    if sky_result.get("status") == "success":
+                        working_image = sky_result["output_path"]
+                        result.stages_completed.append("sky_replace")
+                        sky_time = (datetime.now() - sky_start).total_seconds()
+                        log.info(f"   ✓ Sky replaced in {sky_time:.1f}s (ratio: {sky_result.get('sky_ratio', 0):.1%})")
+                    else:
+                        reason = sky_result.get("reason", "unknown")
+                        log.info(f"   ⏭️ Sky replacement skipped: {reason}")
+                        result.stages_completed.append(f"sky_skipped_{reason}")
+                except Exception as e:
+                    log.warning(f"   ⚠️ Sky replacement error: {e}")
+                    result.stages_completed.append("sky_error")
+            elif result.classification == "exterior" and skip_sky:
+                log.info("☁️ STAGE 5: SKY REPLACEMENT | Skipped by request")
+                result.stages_completed.append("sky_skipped_by_request")
+            elif result.classification == "interior":
+                log.info("🏠 Branch: INTERIOR path")
             
-            # ===== COMPLETE =====
             result.stage = PipelineStage.COMPLETE.value
             result.status = "success"
             result.output_path = working_image
@@ -241,7 +231,7 @@ class Pipeline:
                 },
                 {
                     "name": "Sky Replacement",
-                    "implemented": False,
+                    "implemented": True,
                     "description": "Replaces overcast skies in exterior photos"
                 },
                 {

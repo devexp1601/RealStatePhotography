@@ -1,8 +1,3 @@
-"""
-Pipeline API Routes
-Single endpoint for full processing pipeline
-"""
-
 import os
 import uuid
 from flask import Blueprint, request, jsonify, send_file
@@ -15,7 +10,6 @@ pipeline_bp = Blueprint('pipeline', __name__)
 
 
 def allowed_file(filename: str) -> bool:
-    """Check if file extension is allowed"""
     if '.' not in filename:
         return False
     ext = filename.rsplit('.', 1)[1].lower()
@@ -24,15 +18,6 @@ def allowed_file(filename: str) -> bool:
 
 @pipeline_bp.route('/pipeline/process', methods=['POST'])
 def process_pipeline():
-    """
-    Process images through the full pipeline
-    
-    Input: 1, 3, 5, or 7 images (multipart form data)
-    
-    Pipeline: HDR (if needed) → Normalize → Classify → (future stages)
-    
-    Returns: Full processing result including classification
-    """
     if 'images' not in request.files:
         return jsonify({"error": "No images provided"}), 400
     
@@ -47,8 +32,6 @@ def process_pipeline():
             "error": f"Expected 1, 3, 5, or 7 images, got {len(files)}. "
                      f"Use 1 for single image, 3/5/7 for HDR brackets."
         }), 400
-    
-    # Save uploaded files
     temp_paths = []
     try:
         for file in files:
@@ -66,20 +49,14 @@ def process_pipeline():
                 "error": f"Some files were invalid. Got {len(temp_paths)} valid out of {len(files)}"
             }), 400
         
-        # Sort to ensure correct bracket order (dark → normal → bright)
         temp_paths.sort()
         
-        # Check for skip flags
         skip_hdr = request.form.get('skip_hdr', 'false').lower() == 'true'
         skip_enhance = request.form.get('skip_enhance', 'false').lower() == 'true'
-        
-        # Process through pipeline
-        result = pipeline.process(temp_paths, skip_hdr=skip_hdr, skip_enhance=skip_enhance)
-        
-        # Convert to dict for JSON response
+        skip_sky = request.form.get('skip_sky', 'false').lower() == 'true'
+        result = pipeline.process(temp_paths, skip_hdr=skip_hdr, skip_enhance=skip_enhance, skip_sky=skip_sky)
         response = result.to_dict()
         
-        # Add download URL if output exists
         if result.output_path and os.path.exists(result.output_path):
             response["download_url"] = f"/pipeline/download/{os.path.basename(result.output_path)}"
         
@@ -89,7 +66,6 @@ def process_pipeline():
         return jsonify({"error": str(e)}), 500
     
     finally:
-        # Cleanup temp files (except outputs)
         for path in temp_paths:
             try:
                 if path != result.output_path:
@@ -100,8 +76,6 @@ def process_pipeline():
 
 @pipeline_bp.route('/pipeline/download/<filename>', methods=['GET'])
 def download_result(filename: str):
-    """Download a pipeline output file"""
-    # Check in output folders
     from config import HDR_OUTPUT_FOLDER, OUTPUT_FOLDER, ENHANCED_OUTPUT_FOLDER
     
     for folder in [HDR_OUTPUT_FOLDER, ENHANCED_OUTPUT_FOLDER, OUTPUT_FOLDER, UPLOAD_FOLDER]:
@@ -114,5 +88,4 @@ def download_result(filename: str):
 
 @pipeline_bp.route('/pipeline/info', methods=['GET'])
 def pipeline_info():
-    """Get pipeline information and stages"""
     return jsonify(pipeline.get_pipeline_info())

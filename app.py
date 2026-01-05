@@ -6,7 +6,7 @@ from config import UPLOAD_FOLDER, WATCH_FOLDER, OUTPUT_FOLDER, HDR_OUTPUT_FOLDER
 from models.clip_classifier import classifier
 from services.folder_watcher import folder_watcher
 from services.batch_processor import job_manager
-from routes import classify_bp, jobs_bp, watcher_bp, hdr_bp, pipeline_bp, enhance_bp
+from routes import classify_bp, jobs_bp, watcher_bp, hdr_bp, pipeline_bp, enhance_bp, sky_bp
 
 
 def create_app():
@@ -22,6 +22,7 @@ def create_app():
     app.register_blueprint(hdr_bp)
     app.register_blueprint(pipeline_bp)
     app.register_blueprint(enhance_bp)
+    app.register_blueprint(sky_bp)
     
     @app.route('/')
     def index():

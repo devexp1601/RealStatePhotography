@@ -26,12 +26,12 @@ class TileConfig:
 
 @dataclass 
 class EnhanceConfig:
-    strength: float = 0.3  
-    controlnet_scale: float = 0.8  
-    guidance_scale: float = 7.0
-    num_inference_steps: int = 20  
-    prompt: str = "professional real estate photography, well-lit, vibrant colors, high quality"
-    negative_prompt: str = "blurry, dark, underexposed, overexposed, artificial, fake"
+    strength: float = 0.15  # 85% original preserved - prevent color shifts
+    controlnet_scale: float = 0.95  # Strong texture/color locking
+    guidance_scale: float = 5.0  # Less aggressive prompt following
+    num_inference_steps: int = 15  # Fewer steps = less deviation
+    prompt: str = "professional real estate photography, well-lit, natural colors, high quality, sharp details"
+    negative_prompt: str = "blurry, dark, underexposed, overexposed, artificial, fake, purple, pink tint, unnatural colors"
 
 
 class TiledEnhancer:
@@ -67,7 +67,7 @@ class TiledEnhancer:
             return
         
         from diffusers import (
-            StableDiffusionXLControlNetPipeline,
+            StableDiffusionXLControlNetImg2ImgPipeline,
             ControlNetModel,
         )
         
@@ -92,8 +92,8 @@ class TiledEnhancer:
             use_safetensors=True
         )
         
-        log.info("Loading SDXL Base...")
-        self.pipe = StableDiffusionXLControlNetPipeline.from_pretrained(
+        log.info("Loading SDXL Base (Img2Img mode)...")
+        self.pipe = StableDiffusionXLControlNetImg2ImgPipeline.from_pretrained(
             "stabilityai/stable-diffusion-xl-base-1.0",
             controlnet=[controlnet_tile, controlnet_canny],
             torch_dtype=torch.float16,
@@ -118,6 +118,21 @@ class TiledEnhancer:
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         edges = cv2.Canny(gray, low, high)
         return cv2.cvtColor(edges, cv2.COLOR_GRAY2BGR)
+    
+    def _match_histogram(self, source: np.ndarray, target: np.ndarray, strength: float = 0.8) -> np.ndarray:
+        """Match color histogram of source to target using LAB color space."""
+        source_lab = cv2.cvtColor(source, cv2.COLOR_BGR2LAB).astype(np.float32)
+        target_lab = cv2.cvtColor(target, cv2.COLOR_BGR2LAB).astype(np.float32)
+        
+        for i in range(3):
+            source_mean, source_std = source_lab[:,:,i].mean(), source_lab[:,:,i].std()
+            target_mean, target_std = target_lab[:,:,i].mean(), target_lab[:,:,i].std()
+            if source_std > 0:
+                source_lab[:,:,i] = (source_lab[:,:,i] - source_mean) * (target_std / source_std) + target_mean
+        
+        source_lab = np.clip(source_lab, 0, 255).astype(np.uint8)
+        matched = cv2.cvtColor(source_lab, cv2.COLOR_LAB2BGR)
+        return cv2.addWeighted(source, 1 - strength, matched, strength, 0)
     
     def _calculate_tiles(self, width: int, height: int) -> List[Tuple[int, int, int, int]]:
         tile_size = self.tile_config.tile_size
@@ -151,13 +166,9 @@ class TiledEnhancer:
         if overlap > 0:
             for i in range(overlap):
                 alpha = float(i) / overlap
-                # Left edge
                 mask[:, i] = np.minimum(mask[:, i], alpha)
-                # Right edge
                 mask[:, -(i+1)] = np.minimum(mask[:, -(i+1)], alpha)
-                # Top edge
                 mask[i, :] = np.minimum(mask[i, :], alpha)
-                # Bottom edge
                 mask[-(i+1), :] = np.minimum(mask[-(i+1), :], alpha)
         
         return mask
@@ -165,6 +176,7 @@ class TiledEnhancer:
     def enhance_tile(
         self, 
         tile: np.ndarray,
+        original_tile: Optional[np.ndarray] = None,
         config: Optional[EnhanceConfig] = None
     ) -> np.ndarray:
         
@@ -187,7 +199,9 @@ class TiledEnhancer:
             result = self.pipe(
                 prompt=config.prompt,
                 negative_prompt=config.negative_prompt,
-                image=[tile_pil, canny_pil],  # List of control images for each ControlNet
+                image=tile_pil,  # Source image for img2img
+                control_image=[tile_pil, canny_pil],  # Control images for each ControlNet
+                strength=config.strength,  # How much to change from original
                 controlnet_conditioning_scale=[config.controlnet_scale, config.controlnet_scale * 0.5],
                 guidance_scale=config.guidance_scale,
                 num_inference_steps=config.num_inference_steps,
@@ -196,7 +210,13 @@ class TiledEnhancer:
         result = result.resize(original_size, Image.LANCZOS)
         
         result_np = np.array(result)
-        return cv2.cvtColor(result_np, cv2.COLOR_RGB2BGR)
+        result_bgr = cv2.cvtColor(result_np, cv2.COLOR_RGB2BGR)
+        
+        # Apply histogram matching to preserve original colors
+        if original_tile is not None:
+            result_bgr = self._match_histogram(result_bgr, original_tile, strength=0.8)
+        
+        return result_bgr
     
     def enhance_image(
         self,
@@ -234,13 +254,18 @@ class TiledEnhancer:
             log.info(f"  Tile {i+1}/{len(tiles)} at ({x},{y}) size {w}x{h}")
             
             tile = image[y:y+h, x:x+w].copy()
+            original_tile = tile.copy()  # Keep original for color matching
             
             if w < self.tile_config.tile_size or h < self.tile_config.tile_size:
                 padded = np.zeros((self.tile_config.tile_size, self.tile_config.tile_size, 3), dtype=np.uint8)
                 padded[:h, :w] = tile
                 tile = padded
+                # Also pad original for matching
+                original_padded = np.zeros((self.tile_config.tile_size, self.tile_config.tile_size, 3), dtype=np.uint8)
+                original_padded[:h, :w] = original_tile
+                original_tile = original_padded
             
-            enhanced_tile = self.enhance_tile(tile, config)
+            enhanced_tile = self.enhance_tile(tile, original_tile=original_tile, config=config)
             
             enhanced_tile = enhanced_tile[:h, :w]
             
@@ -255,6 +280,10 @@ class TiledEnhancer:
             output[:, :, c] /= weights
         
         output = np.clip(output, 0, 255).astype(np.uint8)
+        
+        # Global color harmonization - match output to original image colors
+        log.info("  Applying global color harmonization...")
+        output = self._match_histogram(output, image, strength=0.6)
         
         if output_path is None:
             basename = os.path.splitext(os.path.basename(image_path))[0]

@@ -591,6 +591,67 @@
         .file-status.interior { background: rgba(249, 115, 22, 0.2); color: var(--interior); }
         .file-status.exterior { background: rgba(14, 165, 233, 0.2); color: var(--exterior); }
         .file-status.error { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+        
+        /* Pipeline Options */
+        .pipeline-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin: 1rem 0;
+            padding: 1rem;
+            background: var(--bg-elevated);
+            border-radius: 12px;
+        }
+        
+        .option-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        .option-item input[type="checkbox"] {
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border: 2px solid var(--border);
+            border-radius: 4px;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s;
+        }
+        
+        .option-item input[type="checkbox"]:checked {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+        
+        .option-item input[type="checkbox"]:checked::after {
+            content: "✓";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .option-item label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+        }
+        
+        .option-item:hover label {
+            color: var(--text-primary);
+        }
+        
+        .option-item.disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
@@ -791,8 +852,24 @@
                         </div>
                         <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.85rem;">
                             Upload 1 image (single) or 3/5/7 brackets. The pipeline will automatically:
-                            HDR merge → Normalize → Classify as Interior/Exterior
+                            HDR merge → Classify → Enhance → Sky Replace
                         </p>
+                        
+                        <!-- Pipeline Configuration Options -->
+                        <div class="pipeline-options">
+                            <label class="option-item">
+                                <input type="checkbox" id="optionHdr" checked>
+                                <span>🌅 HDR Merge</span>
+                            </label>
+                            <label class="option-item">
+                                <input type="checkbox" id="optionEnhance" checked>
+                                <span>🎨 SDXL Enhancement</span>
+                            </label>
+                            <label class="option-item">
+                                <input type="checkbox" id="optionSky" checked>
+                                <span>☁️ Sky Replacement</span>
+                            </label>
+                        </div>
                         
                         <div class="dropzone compact" id="pipelineDropzone">
                             <div class="dropzone-icon">✨</div>
@@ -815,6 +892,8 @@
                                     <span class="pipeline-stage" id="stage-classify">3️⃣ Classify</span>
                                     <span style="color: var(--text-muted);">→</span>
                                     <span class="pipeline-stage" id="stage-enhance">4️⃣ Enhance</span>
+                                    <span style="color: var(--text-muted);">→</span>
+                                    <span class="pipeline-stage" id="stage-sky">5️⃣ Sky</span>
                                 </div>
                             </div>
                         </div>
@@ -870,8 +949,8 @@
                         <li><span class="check">✓</span> Folder watching</li>
                         <li><span class="check">✓</span> Multi-threaded jobs</li>
                         <li><span class="check">✓</span> HDR bracket merging</li>
-                        <li><span>○</span> SDXL enhancement (soon)</li>
-                        <li><span>○</span> Sky replacement (soon)</li>
+                        <li><span class="check">✓</span> SDXL enhancement</li>
+                        <li><span class="check">✓</span> Sky replacement</li>
                         <li><span>○</span> Window pull (soon)</li>
                     </ul>
                 </div>
@@ -1496,7 +1575,7 @@
         });
 
         function resetPipelineStages() {
-            ['stage-hdr', 'stage-normalize', 'stage-classify', 'stage-enhance'].forEach(id => {
+            ['stage-hdr', 'stage-normalize', 'stage-classify', 'stage-enhance', 'stage-sky'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) {
                     el.classList.remove('active', 'complete');
@@ -1510,11 +1589,12 @@
                 'hdr_merge': 'stage-hdr',
                 'normalize': 'stage-normalize',
                 'classify': 'stage-classify',
-                'enhance': 'stage-enhance'
+                'enhance': 'stage-enhance',
+                'sky_replace': 'stage-sky'
             };
             
             // Mark completed stages
-            const stageOrder = ['hdr_merge', 'normalize', 'classify', 'enhance'];
+            const stageOrder = ['hdr_merge', 'normalize', 'classify', 'enhance', 'sky_replace'];
             const currentIdx = stageOrder.indexOf(stage);
             
             for (let i = 0; i < currentIdx; i++) {
@@ -1539,8 +1619,18 @@
             // Show processing stages
             updatePipelineStage('hdr_merge');
 
+            // Get pipeline options from checkboxes
+            const skipHdr = !document.getElementById('optionHdr').checked;
+            const skipEnhance = !document.getElementById('optionEnhance').checked;
+            const skipSky = !document.getElementById('optionSky').checked;
+
             const formData = new FormData();
             pipelineFiles.forEach(item => formData.append('images', item.file));
+            
+            // Add options to form data
+            if (skipHdr) formData.append('skip_hdr', 'true');
+            if (skipEnhance) formData.append('skip_enhance', 'true');
+            if (skipSky) formData.append('skip_sky', 'true');
 
             try {
                 const res = await fetch('/pipeline/process', { method: 'POST', body: formData });
@@ -1549,7 +1639,7 @@
                 if (!res.ok) throw new Error(data.error);
                 
                 // Mark all stages complete
-                ['stage-hdr', 'stage-normalize', 'stage-classify', 'stage-enhance'].forEach(id => {
+                ['stage-hdr', 'stage-normalize', 'stage-classify', 'stage-enhance', 'stage-sky'].forEach(id => {
                     const el = document.getElementById(id);
                     if (el) {
                         el.classList.remove('active');
